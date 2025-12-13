@@ -2,3 +2,7 @@
  (public_name final-proj)
  (name main)
  (libraries final_proj))
+(executable
+ (public_name diagnose)
+ (name diagnose)
+ (libraries final_proj))

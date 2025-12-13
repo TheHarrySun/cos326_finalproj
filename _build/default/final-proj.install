@@ -4,5 +4,6 @@ lib: [
   "_build/install/default/lib/final-proj/opam"
 ]
 bin: [
+  "_build/install/default/bin/diagnose"
   "_build/install/default/bin/final-proj"
 ]

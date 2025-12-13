@@ -1,0 +1,4 @@
+(executable
+ (public_name diagnose)
+ (name diagnose)
+ (libraries final_proj))
