@@ -192,12 +192,12 @@ def generate_polynomial_data(n_train=50, n_test=200, noise_std=0.25):
         X_train, y_train, X_test, y_test
     """
     # Training data: sparse samples from polynomial curve
-    X_train = np.random.uniform(-5, 5, n_train)
-    y_train = 2.0 * X_train**2 + X_train + 5.0 * np.random.normal(0, noise_std, n_train)
+    X_train = np.random.uniform(-10, 10, n_train)
+    y_train = -2.0 * X_train**2 + 5.0 * X_train + 10. + 10.0 * np.random.normal(0, noise_std, n_train)
     
     # Test data: dense grid for visualization
-    X_test = np.linspace(-5, 5, n_test)
-    y_test = 2.0 * X_test**2 + X_test + 1.0
+    X_test = np.linspace(-10, 10, n_test)
+    y_test = -2.0 * X_test**2 + 5.0 * X_test + 10
     
     # Convert to PyTorch tensors
     X_train = torch.FloatTensor(X_train).reshape(-1, 1)
@@ -350,7 +350,7 @@ def plot_results(X_train, y_train, X_test, y_test, mean_pred, std_pred, losses):
     ax1.legend(fontsize=12, loc='upper right')
     ax1.grid(True, alpha=0.3)
     ax1.set_xlim([X_test_np.min() - 0.5, X_test_np.max() + 0.5])
-    ax1.set_ylim([min(y_test_np.min(), mean_np.min()) - 1, max(y_test_np.max(), mean_np.max()) + 1])
+    ax1.set_ylim([min(y_test_np.min(), mean_np.min()) - 25, max(y_test_np.max(), mean_np.max()) + 25])
     
     # Plot 2: Training loss
     ax2.plot(losses, 'b-', linewidth=2)
@@ -361,7 +361,7 @@ def plot_results(X_train, y_train, X_test, y_test, mean_pred, std_pred, losses):
     ax2.set_xlim([0, len(losses)])
     
     plt.tight_layout()
-    plt.savefig('bnn_polynomial_curve_results_SGD.png', dpi=300, bbox_inches='tight')
+    plt.savefig('bnn_polynomial2_curve_results_SGD.png', dpi=300, bbox_inches='tight')
     print(f"\nPlot saved as 'bnn_sin_curve_results.png'")
     plt.close()
 

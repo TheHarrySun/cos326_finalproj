@@ -1,1 +1,1 @@
-bin/main.ml: Array Final_proj Float List Model Printf String Train Util
+bin/main.ml: Activation Array Final_proj Float List Model Printf String Train Util

@@ -8,7 +8,7 @@ type param = {
 type layer = {
   weights : param array array; 
   bias : param array;
-  activation : float -> float;
+  activation : Activation.activation;
 }
 
 type model = {
@@ -19,7 +19,7 @@ type model = {
 type inst_layer = {
   weights : float array array;
   bias : float array;
-  activation : float -> float;
+  activation : Activation.activation;
 }
 
 type inst_model = inst_layer list

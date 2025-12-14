@@ -46,7 +46,7 @@ let test_layers () =
   Util.make_rng 42;
   
   (* Initialize a simple layer *)
-  let layer = Layer.init_layer 2 3 Float.tanh in
+  let layer = Layer.init_layer 2 3 Activation.Tanh in
   
   assert_true ~msg:"Layer has correct weight shape" 
     (Array.length layer.weights = 3 && Array.length layer.weights.(0) = 2);

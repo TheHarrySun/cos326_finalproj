@@ -1,1 +1,1 @@
-lib/layer.ml: Array Dist List Random Types
+lib/layer.ml: Activation Array Dist List Random Types

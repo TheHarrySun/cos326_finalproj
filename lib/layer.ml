@@ -24,7 +24,7 @@ let init_param (fan_in : int) (fan_out : int) : param =
   }
 
 (* a function for initializing an entire layer, given an activation function, input dimension, and output dimension *)
-let init_layer (input_dim : int) (output_dim : int) (activation : float -> float) : layer =
+let init_layer (input_dim : int) (output_dim : int) (activation : Activation.activation) : layer =
   let w : param array array = Array.init output_dim (fun _ -> 
     Array.init input_dim (fun _ -> init_param input_dim output_dim)
   ) in
@@ -47,7 +47,7 @@ let forward_inst_layer (inst : inst_layer) (x : float array) : float array =
     for j = 0 to Array.length x - 1 do
       sum := !sum +. inst.weights.(i).(j) *. x.(j)
     done;
-    inst.activation !sum  
+    Activation.apply inst.activation !sum  
   )
 
 (* forward pass through model and cache the pre-activation and post-activation values *)
@@ -65,7 +65,7 @@ let forward_with_cache (inst : inst_model) (x : float array) : forward_cache =
       !sum
     ) in
 
-    let a = Array.map layer.activation z in
+    let a = Array.map (Activation.apply layer.activation) z in
 
     layer_caches := {
     input = !current_input;

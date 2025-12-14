@@ -58,46 +58,42 @@ let backprop_single_point (noise_precision : float) (inst : inst_model) (cache :
     match layers, caches, grads_list with
     | [], [], [] -> []
     | layer_hd :: layer_tl, cache_hd :: cache_tl, grad_hd :: grad_tl ->
+      (* delta_next is ∂L/∂a (post-activation gradient)
+         We need ∂L/∂z (pre-activation gradient) for weight gradients.
+         
+         Standard backprop: ∂L/∂z = ∂L/∂a ⊙ f'(z)
+         
+         This is the "local gradient" for this layer's activation. *)
+      
+      let delta_pre = Array.mapi (fun i d ->
+        let pre = cache_hd.pre_activation.(i) in
+        let post = cache_hd.post_activation.(i) in
+        let deriv = Activation.deriv layer_hd.activation pre post in
+        d *. deriv
+      ) delta_next in
+      
+      (* Now compute weight and bias gradients using ∂L/∂z *)
       for i = 0 to Array.length layer_hd.weights - 1 do
         for j = 0 to Array.length layer_hd.weights.(0) - 1 do
-          grad_hd.weight_grads.(i).(j) <- delta_next.(i) *. cache_hd.input.(j)
+          grad_hd.weight_grads.(i).(j) <- delta_pre.(i) *. cache_hd.input.(j)
         done
       done;
 
       for i = 0 to Array.length layer_hd.bias - 1 do
-        grad_hd.bias_grads.(i) <- delta_next.(i)
+        grad_hd.bias_grads.(i) <- delta_pre.(i)
       done;
 
       let delta_prev =
         if layer_tl <> [] then begin
           let input_size = Array.length cache_hd.input in
-          (* Compute W^T · δ_current *)
-          let delta_weighted = Array.init input_size (fun j -> 
+          (* Compute W^T · ∂L/∂z to get ∂L/∂a_{prev} *)
+          Array.init input_size (fun j -> 
             let sum = ref 0.0 in
-            for i = 0 to Array.length delta_next - 1 do
-              sum := !sum +. layer_hd.weights.(i).(j) *. delta_next.(i)
+            for i = 0 to Array.length delta_pre - 1 do
+              sum := !sum +. layer_hd.weights.(i).(j) *. delta_pre.(i)
             done;
             !sum
-          ) in
-
-          (* For backprop: δ_{L-1} = (W_L^T · δ_L) ⊙ f'(z_{L-1})
-             We need the activation derivative of the PREVIOUS layer (L-1).
-             cache_hd.input contains the output of layer L-1 (i.e., a_{L-1} = f(z_{L-1}))
-             
-             For activation functions:
-             - tanh: f'(a) = 1 - a² (derivative computed from output)
-             - relu: f'(z) requires checking z > 0 (derivative from pre-activation)
-             - identity: f'(x) = 1
-             
-             Since cache_hd.input = post_activation of previous layer, we can use it
-             for tanh. For relu, we should ideally use pre_activation of prev layer.
-             However, checking cache_hd.input works for relu too since:
-             if output > 0, then input was > 0 (relu preserves sign). *)
-          
-          let prev_layer = List.hd layer_tl in
-          Array.map2 (fun d_weighted activation_output -> 
-            let deriv = Activation.activation_deriv prev_layer.activation activation_output in
-            d_weighted *. deriv) delta_weighted cache_hd.input
+          )
           end else
             [||]
           in
@@ -117,10 +113,8 @@ let backprop (noise_precision : float) (inst : inst_model) (data : (float array 
 
     let grads_for_this_point = backprop_single_point noise_precision inst cache y in
 
-    for layer_idx = 0 to List.length total_grads - 1 do
-      let total_layer = List.nth total_grads layer_idx in
-      let point_layer = List.nth grads_for_this_point layer_idx in
-
+    (* Use List.iter2 to ensure proper alignment between total_grads and point gradients *)
+    List.iter2 (fun total_layer point_layer ->
       for i = 0 to Array.length total_layer.weight_grads - 1 do
         for j = 0 to Array.length total_layer.weight_grads.(0) - 1 do
           total_layer.weight_grads.(i).(j) <- total_layer.weight_grads.(i).(j) +. point_layer.weight_grads.(i).(j)
@@ -130,7 +124,7 @@ let backprop (noise_precision : float) (inst : inst_model) (data : (float array 
       for i = 0 to Array.length total_layer.bias_grads - 1 do
         total_layer.bias_grads.(i) <- total_layer.bias_grads.(i) +. point_layer.bias_grads.(i)
       done
-    done
+    ) total_grads grads_for_this_point
     ) data;
   
   (* Average gradients over all data points *)
@@ -492,7 +486,7 @@ let clip_grad g max_norm =
 
 (* APPLY GRADIENTS TO UPDATE MODEL PARAMS USING GRADIENT DESCENT *)
 let update_params (m : model) (grads : model_grad) (lr : float) : model =
-  let max_grad_norm = 1000.0 in  (* Very high clip threshold - effectively no clipping *)
+  let max_grad_norm = 5.0 in  (* Very high clip threshold - effectively no clipping *)
   let max_rho = 5.0 in          (* Allow larger sigma for expressive weights *)
   let min_rho = -3.0 in         (* Prevent overly deterministic weights *)
   
@@ -584,6 +578,36 @@ let train (m : model) (data : (float array * float array) list) (num_epochs : in
       end;
 
       let grads = compute_gradient model data num_samples beta prior_mu prior_sigma in
+      
+      (* Print gradient magnitudes for each layer *)
+      if epoch mod 100 == 0 then begin
+        Printf.printf "  Gradient magnitudes:\n";
+        List.iteri (fun layer_idx (layer_grad : layer_grad) ->
+          (* Compute average absolute gradient for weights *)
+          let sum_w = ref 0.0 in
+          let count_w = ref 0 in
+          Array.iter (fun row ->
+            Array.iter (fun g ->
+              sum_w := !sum_w +. abs_float g.grad_mu;
+              count_w := !count_w + 1
+            ) row
+          ) layer_grad.weight_grads;
+          let avg_w = !sum_w /. float_of_int !count_w in
+          
+          (* Compute average absolute gradient for biases *)
+          let sum_b = ref 0.0 in
+          let count_b = ref 0 in
+          Array.iter (fun g ->
+            sum_b := !sum_b +. abs_float g.grad_mu;
+            count_b := !count_b + 1
+          ) layer_grad.bias_grads;
+          let avg_b = !sum_b /. float_of_int !count_b in
+          
+          Printf.printf "    Layer %d: |∇W_μ| = %.6f, |∇b_μ| = %.6f\n" 
+            layer_idx avg_w avg_b
+        ) grads.layer_grads;
+        Printf.printf "\n%!"
+      end;
 
       let new_model = update_params model grads lr in
 

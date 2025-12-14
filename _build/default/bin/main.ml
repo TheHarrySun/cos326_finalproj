@@ -38,16 +38,16 @@ let () =
   let architecture = [1; 20; 1] in
   
   let epochs = 10000 in
-  let learning_rate = 0.0001 in  (* Match Python's lr *)
+  let learning_rate = 0.00005 in  (* Match Python's lr *)
   let mc_samples = 3 in         (* Match Python *)
-  let beta = 1.0 in             (* Test with beta=1.0 like Python *)
+  let beta = 0. in             (* Test with beta=1.0 like Python *)
   
   (* Prior distribution parameters: p(w) = N(prior_mu, prior_sigma²)
      Standard choice: prior_mu = 0.0, prior_sigma = 1.0 (standard normal)
      Tighter prior (e.g., prior_sigma = 0.1) increases regularization
      Wider prior (e.g., prior_sigma = 2.0) decreases regularization *)
   let prior_mu = 0.0 in
-  let prior_sigma = 1.0 in
+  let prior_sigma = 1000.0 in
   (* ============================================================== *)
   
   (* Generate training data *)
@@ -61,7 +61,7 @@ let () =
   (* Create activation functions: relu for all hidden layers, identity for output *)
   let num_layers = List.length architecture - 1 in
   let activations = List.init num_layers (fun i ->
-    if i < num_layers - 1 then Model.relu else (fun x -> x)
+    if i < num_layers - 1 then Activation.Relu else Activation.Identity
   ) in
   
   let model = Model.create_mlp architecture activations in
@@ -129,14 +129,14 @@ let () =
   
   (* Generate predictions on a dense grid for smooth plotting *)
   let num_pred_points = 100 in
-  let x_min = -5.0 in
-  let x_max = 5.0 in
+  let x_min = -10.0 in
+  let x_max = 10.0 in
   let pred_oc = open_out "bnn_predictions.csv" in
   Printf.fprintf pred_oc "x,true_y,mean,std,lower,upper\n";
   
   for i = 0 to num_pred_points - 1 do
     let x = x_min +. (float_of_int i /. float_of_int (num_pred_points - 1)) *. (x_max -. x_min) in
-    let true_y = 2. *. (x ** 2.) +. x +. 1. in
+    let true_y = -2.0 *. (x ** 2.) +. 5. *. x +. 10. in
 
     
     (* Sample multiple predictions to estimate mean and uncertainty *)

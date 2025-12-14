@@ -23,9 +23,9 @@ let make_sin_data n =
 let make_polynomial_data n =
   let data = ref [] in
   for _ = 1 to n do
-    let x = (Random.float 10.0) -. 5.0 in  (* x in [-5, 5] *)
+    let x = (Random.float 20.0) -. 10.0 in  (* x in [-5, 5] *)
     (* Polynomial: y = 2*x^2 + x + 1 *)
-    let y_true = 2.0 *. (x ** 2.0) +. x +. 1.0 in
+    let y_true = -2.0 *. (x ** 2.0) +. 5. *. x +. 10.0 in
     (* noise ~ U[-1.25, 1.25] to match Python's N(0, 1.25^2) scale *)
     let noise = 1.25 *. (2.0 *. Random.float 1.0 -. 1.0) in
     let y = y_true +. noise in
@@ -38,10 +38,10 @@ let make_polynomial_data n =
 let make_linear_data n =
   let data = ref [] in
   for _ = 1 to n do
-    let x = (Random.float 10.0) -. 5.0 in  (* x in [-5, 5] *)
+    let x = (Random.float 20.0) -. 10.0 in  (* x in [-5, 5] *)
     (* Linear: y = 2.5*x - 1.5 *)
-    let y_true = 2.5 *. x -. 1.5 in
-    let noise = 0.4 *. (Random.float 1.0 -. 0.5) in  (* noise in [-0.2, 0.2] *)
+    let y_true = 10. *. x -. 1.5 in
+    let noise = 4.0 *. (Random.float 1.0 -. 0.5) in  (* noise in [-0.2, 0.2] *)
     let y = y_true +. noise in
     data := ([| x |], [| y |]) :: !data
   done;

@@ -3,8 +3,6 @@
 open Types
 open Layer
 
-let relu (x : float) : float = if x < 0.0 then 0.0 else x
-
 let sample_inst_model (m : model) : inst_model =
   List.map sample_inst_layer m.layers
 
@@ -17,18 +15,18 @@ let forward_inst (inst : inst_model) (x : float array) : float array =
 
 let sample_mlp (input_dim : int) (hidden : int) (output_dim : int) () =
   let l1 =
-    Layer.init_layer input_dim hidden relu in
+    Layer.init_layer input_dim hidden Activation.Relu in
   let l2 =
-    Layer.init_layer hidden output_dim (fun x -> x) in
+    Layer.init_layer hidden output_dim Activation.Identity in
   { 
     layers = [ l1; l2 ];
     log_noise_precision = { mu = 0.0; rho = -2.0 };
   }
 
 (* Generic MLP builder that accepts a list of layer sizes and activation functions
-   Example: create_mlp [1; 20; 10; 1] [relu; relu; (fun x -> x)]
+   Example: create_mlp [1; 20; 10; 1] [Activation.Relu; Activation.Relu; Activation.Identity]
    Creates: input(1) -> hidden1(20,relu) -> hidden2(10,relu) -> output(1,identity) *)
-let create_mlp (layer_sizes : int list) (activations : (float -> float) list) : model =
+let create_mlp (layer_sizes : int list) (activations : Activation.activation list) : model =
   if List.length layer_sizes < 2 then
     failwith "Need at least 2 layer sizes (input and output)"
   else if List.length activations <> List.length layer_sizes - 1 then
