@@ -69,7 +69,7 @@ print()
 fig, ax = plt.subplots(figsize=(10, 6))
 
 # Plot true function
-ax.plot(pred_data['x'], pred_data['true_y'], 'g-', label='True -2x^2 + 10x + 5', linewidth=2)
+ax.plot(pred_data['x'], pred_data['true_y'], 'g-', label='True sin(x)', linewidth=2)
 
 # Plot mean prediction
 ax.plot(pred_data['x'], pred_data['mean'], 'b-', label='BNN Mean Prediction', linewidth=2)
@@ -89,7 +89,7 @@ ax.grid(True, alpha=0.3)
 
 
 plt.tight_layout()
-plt.savefig('bnn_results_polynomial_lowerbeta.png', dpi=300, bbox_inches='tight')
+plt.savefig('bnn_results_new_sin.png', dpi=300, bbox_inches='tight')
 print('Prediction plot saved to bnn_results.png')
 plt.close()
 
@@ -111,7 +111,7 @@ ax2.text(0.05, 0.95, f'Initial: {initial_loss:.4f}\nFinal: {final_loss:.4f}\nImp
          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
 plt.tight_layout()
-plt.savefig('bnn_loss_polynomial_lowerbeta.png', dpi=300, bbox_inches='tight')
+plt.savefig('bnn_loss_new_sin.png', dpi=300, bbox_inches='tight')
 print('Loss plot saved to bnn_loss.png')
 plt.close()
 

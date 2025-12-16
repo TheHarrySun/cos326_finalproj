@@ -1,7 +1,6 @@
 (* code for instantiating a model and running through it *)
 
 open Types
-open Activation
 open Layer
 
 let sample_inst_model (m : model) : inst_model =

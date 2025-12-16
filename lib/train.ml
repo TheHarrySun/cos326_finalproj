@@ -31,17 +31,7 @@ let init_zero_inst_grads (inst : inst_model) : inst_model_grad =
   in
   List.map init_zero_inst_grads_layer inst
 
-(* Backpropagation for one data point using Gaussian NLL
-   
-   For Gaussian likelihood NLL with learnable precision τ:
-   NLL = (τ/2)·(y - ŷ)² - (1/2)·log(τ) + const
-   
-   ∂NLL/∂ŷ = τ·(ŷ - y)
-   
-   Then for each layer going backward:
-   1. ∂L/∂wᵢⱼ = δᵢ · aⱼ  where δ is error signal, a is input activation
-   2. ∂L/∂bᵢ = δᵢ
-   3. δ_prev = Wᵀ·δ_curr ⊙ f'(z)  where ⊙ is element-wise product *)
+(* Backpropagation for one data point using Gaussian NLL *)
 let backprop_single_point (noise_precision : float) (inst : inst_model) (cache : Layer.forward_cache) (y : float array) : inst_model_grad = 
   (* initialize zero gradients *)
   let grads = init_zero_inst_grads inst in
@@ -57,14 +47,7 @@ let backprop_single_point (noise_precision : float) (inst : inst_model) (cache :
   let rec backprop_layers layers caches grads_list delta_next =
     match layers, caches, grads_list with
     | [], [], [] -> []
-    | layer_hd :: layer_tl, cache_hd :: cache_tl, grad_hd :: grad_tl ->
-      (* delta_next is ∂L/∂a (post-activation gradient)
-         We need ∂L/∂z (pre-activation gradient) for weight gradients.
-         
-         Standard backprop: ∂L/∂z = ∂L/∂a ⊙ f'(z)
-         
-         This is the "local gradient" for this layer's activation. *)
-      
+    | layer_hd :: layer_tl, cache_hd :: cache_tl, grad_hd :: grad_tl -> 
       let delta_pre = Array.mapi (fun i d ->
         let pre = cache_hd.pre_activation.(i) in
         let post = cache_hd.post_activation.(i) in
@@ -171,12 +154,7 @@ let sample_layer_with_epsilons (l : layer) : sampled_layer =
 let sample_model_with_epsilons (m : model) : sampled_layer list =
   List.map sample_layer_with_epsilons m.layers
   
-(* Derivative of softplus: d/dρ[log(1 + e^ρ)] = e^ρ/(1 + e^ρ) = sigmoid(ρ)
-   
-   Proof: Let σ(ρ) = log(1 + e^ρ)
-   dσ/dρ = (1/(1 + e^ρ)) · e^ρ = e^ρ/(1 + e^ρ) = sigmoid(ρ)
-   
-   This is needed for the chain rule when computing ∂L/∂ρ = (∂L/∂σ)·(∂σ/∂ρ) *)
+(* Derivative of softplus *)
 let softplus_deriv (rho : float) : float =
   let exp_rho = Float.exp rho in
   exp_rho /. (1.0 +. exp_rho)
@@ -190,18 +168,7 @@ let rec map3 f l1 l2 l3 =
   | _ ->
       invalid_arg "map3: lists have different lengths"
 
-(* Reparameterization gradient computation
-   
-   Given w = μ + ε·σ(ρ) where ε ~ N(0,1) is fixed:
-   
-   ∂L/∂μ = ∂L/∂w · ∂w/∂μ = ∂L/∂w · 1 = ∂L/∂w
-   
-   ∂L/∂ρ = ∂L/∂w · ∂w/∂ρ
-         = ∂L/∂w · ∂(μ + ε·σ(ρ))/∂ρ
-         = ∂L/∂w · ε · ∂σ(ρ)/∂ρ
-         = ∂L/∂w · ε · σ'(ρ)
-   
-   where σ'(ρ) = sigmoid(ρ) is the derivative of softplus. *)
+(* Reparameterization gradient computation *)
 let reparam_gradients (m : model) (sampled_layers : sampled_layer list) (inst_grads : inst_model_grad) : layer_grad list =
   map3 (fun (layer : layer) (sampled_layer : sampled_layer) (inst_grad : inst_layer_grad) : layer_grad ->
     let w_grads = Array.mapi (fun i param_row -> 
@@ -229,24 +196,7 @@ let reparam_gradients (m : model) (sampled_layers : sampled_layer list) (inst_gr
     ) m.layers sampled_layers inst_grads
 
 
-(* KL divergence gradient computations
-   
-   For KL(q||p) where q = N(μ, σ²(ρ)) and p = N(0, 1):
-   
-   KL = log(σ_p/σ_q) + (σ_q² + μ²)/(2σ_p²) - 1/2
-      = -log(σ_q) + (σ_q² + μ²)/2 - 1/2  [when σ_p=1, μ_p=0]
-   
-   ∂KL/∂μ = ∂/∂μ[(σ_q² + μ²)/(2σ_p²)]
-          = 2μ/(2σ_p²)
-          = μ/σ_p²
-   
-   ∂KL/∂σ_q = -1/σ_q + σ_q/σ_p²
-            = (σ_q² - σ_p²)/(σ_q·σ_p²)
-   
-   ∂KL/∂ρ = (∂KL/∂σ_q)·(∂σ_q/∂ρ)
-          = [(σ_q² - σ_p²)/(σ_q·σ_p²)]·σ'(ρ)
-   
-   where σ_q = softplus(ρ) and σ'(ρ) = sigmoid(ρ) *)
+(* KL divergence gradient computations *)
 let compute_kl_gradients (m : model) (prior_mu : float) (prior_sigma : float) : layer_grad list =
   let prior_var = prior_sigma *. prior_sigma in
 
@@ -350,13 +300,7 @@ let scale_gradients (grad : model_grad) (scale : float) : model_grad =
 
 
 
-(* Compute gradient of NLL w.r.t. noise precision parameter
-   
-   NLL = (τ/2)·SSE - (N/2)·log(τ) + const  where τ = exp(log_τ)
-   
-   ∂NLL/∂log_τ = ∂NLL/∂τ · ∂τ/∂log_τ
-                = [SSE/2 - N/(2τ)] · τ
-                = (SSE - N)/2 *)
+(* compute gradient of NLL w.r.t. noise precision parameter *)
 let compute_noise_gradient (m : model) (sampled_log_precision : float) (epsilon : float) (data : (float array * float array) list) (inst : inst_model) : param_grad =
   let noise_precision = Float.exp sampled_log_precision in
   
@@ -381,23 +325,7 @@ let compute_noise_gradient (m : model) (sampled_log_precision : float) (epsilon 
     grad_rho = grad_log_tau *. epsilon *. sigma_deriv;
   }
 
-(* MAIN GRADIENT COMPUTATION FUNCTION
-   
-   Computes ∇_θ ELBO where θ = {μ, ρ} are variational parameters
-   
-   ELBO = E_q[log p(D|w)] - β·KL(q||p)
-   
-   Gradient estimation:
-   ∇_θ ELBO ≈ (1/M)·Σ_m [∇_θ log p(D|w^(m))] - β·∇_θ KL
-   
-   where:
-   1. Sample M weight configurations: w^(m) ~ q(w|θ) using reparameterization
-   2. For each sample, compute ∇_w log p(D|w^(m)) via backprop
-   3. Convert to ∇_θ using reparameterization trick
-   4. Average over M samples
-   5. Add analytical KL gradient scaled by β
-   
-   Note: β must match the value in compute_elbo for consistency *)
+(* MAIN GRADIENT COMPUTATION FUNCTION *)
 let compute_gradient (m : model) (data : (float array * float array) list) (num_samples : int) (beta : float) (prior_mu : float) (prior_sigma : float) : model_grad =
   (* beta is now passed as parameter for easy configuration *)
   let accumulated_grads = ref (init_zero_grads m) in

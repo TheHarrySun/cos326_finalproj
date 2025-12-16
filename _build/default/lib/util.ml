@@ -12,7 +12,7 @@ let print_array arr =
 let make_sin_data n =
   let data = ref [] in
   for _ = 1 to n do
-    let x = (Random.float 10.) -. 5. in
+    let x = (Random.float 20.) -. 10. in
     let y = Float.sin x +. 0.3 *. (Random.float 1.0 -. 0.5) in
     data := ([| x |], [| y |]) :: !data
   done;
@@ -41,7 +41,7 @@ let make_linear_data n =
     let x = (Random.float 20.0) -. 10.0 in  (* x in [-5, 5] *)
     (* Linear: y = 2.5*x - 1.5 *)
     let y_true = 10. *. x -. 1.5 in
-    let noise = 4.0 *. (Random.float 1.0 -. 0.5) in  (* noise in [-0.2, 0.2] *)
+    let noise = 10.0 *. (Random.float 1.0 -. 0.5) in  (* noise in [-0.2, 0.2] *)
     let y = y_true +. noise in
     data := ([| x |], [| y |]) :: !data
   done;

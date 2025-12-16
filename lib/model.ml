@@ -23,9 +23,7 @@ let sample_mlp (input_dim : int) (hidden : int) (output_dim : int) () =
     log_noise_precision = { mu = 0.0; rho = -2.0 };
   }
 
-(* Generic MLP builder that accepts a list of layer sizes and activation functions
-   Example: create_mlp [1; 20; 10; 1] [Activation.Relu; Activation.Relu; Activation.Identity]
-   Creates: input(1) -> hidden1(20,relu) -> hidden2(10,relu) -> output(1,identity) *)
+(* Generic MLP builder that accepts a list of layer sizes and activation functions *)
 let create_mlp (layer_sizes : int list) (activations : Activation.activation list) : model =
   if List.length layer_sizes < 2 then
     failwith "Need at least 2 layer sizes (input and output)"
@@ -76,12 +74,7 @@ let compute_total_kl (m : model) (prior_mu : float) (prior_sigma : float) : floa
     acc +. compute_layer_kl layer
   ) 0.0 m.layers
 
-(* compute the negative log likelihood for a particular batch
-   
-   For Gaussian likelihood p(y|x,w,τ) = N(y; f(x,w), 1/τ) where τ is precision:
-   NLL = Σ_i [(τ/2)·(y_i - f(x_i,w))² - (1/2)·log(τ) + (1/2)·log(2π)]
-   
-   With learnable log_precision parameter matching Python implementation *)
+(* compute the negative log likelihood for a particular batch *)
 let compute_nll (m : model) (inst : inst_model) (data : (float array * float array) list) : float =
   let log_noise_precision = Dist.reparam m.log_noise_precision in
   let noise_precision = Float.exp log_noise_precision in
@@ -103,18 +96,7 @@ let compute_nll (m : model) (inst : inst_model) (data : (float array * float arr
 
 (* Evidence Lower Bound (ELBO) for Bayesian Neural Network
    
-   ELBO = E_q[log p(D|w)] - β·KL(q(w)||p(w))
-   
-   where:
-   - E_q[log p(D|w)] ≈ (1/M) Σ log p(D|w^(m)) with w^(m) ~ q(w)  [MC estimate]
-   - log p(D|w) = -NLL(w) for Gaussian likelihood
-   - KL(q(w)||p(w)) is sum of KL divergences for all weight parameters
-   - β is a scaling factor (β-VAE): β<1 reduces regularization
-   
-   Both NLL and KL are total (not normalized) values.
-   Normalization only happens for display in the training loop.
-   
-   Maximizing ELBO ≡ Minimizing: NLL + β·KL *)
+   ELBO = E_q[log p(D|w)] - β·KL(q(w)||p(w)) *)
 let compute_elbo (m : model) (data : (float array * float array) list) (num_samples : int) (beta : float) (prior_mu : float) (prior_sigma : float) : float =
   (* beta is now passed as parameter for easy configuration *)
 

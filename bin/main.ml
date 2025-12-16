@@ -30,30 +30,23 @@ let () =
   (* ===== HYPERPARAMETERS - Edit these to configure training ===== *)
   let n_points = 1000 in
   
-  (* Model architecture: list of layer sizes [input_dim; hidden1; hidden2; ...; output_dim]
-     Examples:
-     - [1; 20; 1]        = single hidden layer with 20 neurons
-     - [1; 50; 20; 1]    = two hidden layers with 50 and 20 neurons
-     - [1; 64; 32; 16; 1] = three hidden layers with 64, 32, and 16 neurons *)
+  (* Model architecture: list of layer sizes [input_dim; hidden1; hidden2; ...; output_dim] *)
   let architecture = [1; 20; 1] in
   
   let epochs = 10000 in
-  let learning_rate = 0.00005 in  (* Match Python's lr *)
-  let mc_samples = 3 in         (* Match Python *)
-  let beta = 0. in             (* Test with beta=1.0 like Python *)
+  let learning_rate = 0.00005 in
+  let mc_samples = 3 in
+  let beta = 0.1 in
   
-  (* Prior distribution parameters: p(w) = N(prior_mu, prior_sigma²)
-     Standard choice: prior_mu = 0.0, prior_sigma = 1.0 (standard normal)
-     Tighter prior (e.g., prior_sigma = 0.1) increases regularization
-     Wider prior (e.g., prior_sigma = 2.0) decreases regularization *)
+  (* Prior distribution parameters: p(w) = N(prior_mu, prior_sigma²) *)
   let prior_mu = 0.0 in
-  let prior_sigma = 1000.0 in
+  let prior_sigma = 1.0 in
   (* ============================================================== *)
   
   (* Generate training data *)
   Printf.printf "Generating training data...\n";
-  let data = Util.make_polynomial_data n_points in
-  Printf.printf "Generated %d data points (polynomial curve)\n\n" (List.length data);
+  let data = Util.make_sin_data n_points in
+  Printf.printf "Generated %d data points (sin curve)\n\n" (List.length data);
   
   (* Initialize model with specified architecture *)
   Printf.printf "Initializing model...\n";
@@ -136,7 +129,7 @@ let () =
   
   for i = 0 to num_pred_points - 1 do
     let x = x_min +. (float_of_int i /. float_of_int (num_pred_points - 1)) *. (x_max -. x_min) in
-    let true_y = -2.0 *. (x ** 2.) +. 5. *. x +. 10. in
+    let true_y = Float.sin x in
 
     
     (* Sample multiple predictions to estimate mean and uncertainty *)

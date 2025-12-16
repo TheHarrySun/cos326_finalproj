@@ -1,7 +1,6 @@
 (* Defining the layers *)
 open Types
 open Dist
-open Activation
 
 type forward_cache = {
   input : float array;

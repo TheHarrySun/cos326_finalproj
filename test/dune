@@ -1,3 +1,0 @@
-(test
- (name test_final_proj)
- (libraries final_proj))
